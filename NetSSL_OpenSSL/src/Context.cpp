@@ -126,7 +126,15 @@ void Context::init(const Params& params)
 			if (aFile.isDirectory())
 				errCode = SSL_CTX_load_verify_locations(_pSSLContext, 0, Poco::Path::transcode(params.caLocation).c_str());
 			else
+			{
+#if defined(_WIN32) && OPENSSL_VERSION_NUMBER >= 0x10101000L
+				// OpenSSL 1.1.1 opens UTF-8 filenames using the Windows wide API.
+				// Converting to the system code page can lose valid Unicode paths.
+				errCode = SSL_CTX_load_verify_locations(_pSSLContext, params.caLocation.c_str(), 0);
+#else
 				errCode = SSL_CTX_load_verify_locations(_pSSLContext, Poco::Path::transcode(params.caLocation).c_str(), 0);
+#endif
+			}
 			if (errCode != 1)
 			{
 				std::string msg = Utility::getLastError();
